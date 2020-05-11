@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import io from 'socket.io-client';
-import { Line, HorizontalBar, Bar, Pie, Doughnut } from 'react-chartjs-2';
+import { HorizontalBar, Bar, Pie, Doughnut } from 'react-chartjs-2';
 
 import { Container, ChartContainer, Title } from './styles';
 
@@ -11,11 +11,6 @@ interface DataProps {
     name: string;
     version: string;
     major: string;
-  };
-  device: {
-    vendor: string;
-    model: string;
-    type: string;
   };
   engine: { name: string; version: string };
   language: string;
@@ -28,9 +23,12 @@ interface StateProps {
 }
 
 class Home extends Component<{}, StateProps> {
-  state = {
-    data: [] as DataProps[],
-  };
+  constructor(props: any) {
+    super(props);
+    this.state = {
+      data: [] as DataProps[],
+    };
+  }
 
   componentDidMount(): void {
     const socket = io('http://localhost:3000');
@@ -40,7 +38,11 @@ class Home extends Component<{}, StateProps> {
     });
   }
 
-  render() {
+  // render() {
+  //   return <h1>Dash</h1>;
+  // }
+
+  render(): React.ReactChild {
     const { data } = this.state;
 
     const usersPerPage: any = {};

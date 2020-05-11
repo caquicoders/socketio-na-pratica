@@ -9,6 +9,7 @@ interface ContainerProps {
   title: string;
   subtitle: string;
 }
+
 interface ContainerState {
   socket?: SocketIOClient.Socket;
 }
@@ -23,6 +24,7 @@ class ContainerComponent extends Component<ContainerProps, ContainerState> {
 
   componentDidMount(): void {
     const infos = getInfos(window);
+    console.log('infos', infos);
     const socket = io('http://localhost:3000', {
       query: { infos: JSON.stringify(infos) },
     });
@@ -34,7 +36,7 @@ class ContainerComponent extends Component<ContainerProps, ContainerState> {
     if (socket) socket.disconnect();
   }
 
-  render() {
+  render(): React.ReactChild {
     const { title, subtitle } = this.props;
     return (
       <Container>

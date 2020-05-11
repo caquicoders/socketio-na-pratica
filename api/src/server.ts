@@ -1,16 +1,19 @@
 import express from 'express';
 import morgan from 'morgan';
 import cors from 'cors';
-import uaParser from 'ua-parser-js';
-import socketio from 'socket.io';
 import http from 'http';
+import socketio from 'socket.io';
+import db from './db';
+import Access, { InterfaceAccess } from './access';
+
+const mongoAddress = 'mongodb://localhost:27017/caqui38';
+db(mongoAddress);
 
 const app = express();
 
 const httpServer = http.createServer(app);
 const io = socketio.listen(httpServer, {
-  origins:
-    'localhost:* http://localhost:*  http://polite-quail-94.serverless.social  http://polite-quail-94.serverless.social/*',
+  origins: '*:*',
 });
 
 interface ClientProps {
@@ -21,11 +24,6 @@ interface ClientProps {
     version: string;
     major: string;
   };
-  device: {
-    vendor: string;
-    model: string;
-    type: string;
-  };
   engine: { name: string; version: string };
   language: string;
   os: { name: string; version: string };
@@ -34,31 +32,7 @@ interface ClientProps {
 
 const clients: ClientProps[] = [];
 
-app.use(cors());
-app.use(express.json());
-app.use(morgan('dev'));
-
-app.get('/', (req, res) => {
-  res.json({ message: 'Hello Caqui#38!' });
-});
-
-app.set('socketio', io);
-
-const proccessClients = () => {
-  // let clientsReturn: {
-  //   browser: {},
-  //   os: {},
-  //   page: {},
-  // };
-
-  // clients.forEach(client => {
-
-  // });
-  // console.log('return', clientsReturn);
-  return clients;
-};
-
-const handleAddClient = (id: string, infos): void => {
+const handleAddClient = (id: string, infos: ClientProps): void => {
   const index = clients.findIndex(c => c.id === id);
   if (index < 0) {
     clients.push({
@@ -73,28 +47,45 @@ const handleRemoveClient = (id: string): void => {
   clients.splice(index, 1);
 };
 
+const saveAccessToDB = async (access: InterfaceAccess): Promise<void> => {
+  const accessToSave = new Access(access);
+  await accessToSave.save();
+};
+
+app.use(cors());
+app.use(express.json());
+app.use(morgan('dev'));
+
+app.get('/', (req, res) => {
+  res.json({ message: 'Hello Caqui#38!' });
+});
+
 io.on('connection', socket => {
+  // console.log('Temos uma nova conexão aqui! ', socket.id);
+
   const { id, handshake } = socket;
   const { query, address } = handshake;
   const { infos } = query;
-  console.log('newConnection', id, infos);
 
   if (infos) {
-    handleAddClient(id, {
+    const access = {
       ...JSON.parse(infos),
       address,
-    });
+    };
+    // console.log('access', access);
+
+    handleAddClient(id, access);
+    saveAccessToDB(access);
+    io.emit('updateData', clients);
   }
 
-  io.emit('updateData', proccessClients());
-
   socket.on('disconnect', () => {
-    console.log('disconnect', id);
+    // console.log('disconnect', socket.id);
     handleRemoveClient(id);
-    io.emit('updateData', proccessClients());
+    io.emit('updateData', clients);
   });
 });
 
-const server = httpServer.listen(process.env.PORT || 3000, () => {
-  console.log('Server started on port %s', process.env.PORT || 3003);
+httpServer.listen(process.env.PORT || 3000, () => {
+  console.log('Server started on port %s', process.env.PORT || 3000);
 });
